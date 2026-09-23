@@ -95,3 +95,5 @@ npx wrangler deploy
 
 No Cloudflare zone/domain is assumed here — bind a custom domain/route
 separately once deployed.
+
+Workers Builds is connected to this repo — pushes to `main` auto-deploy.
