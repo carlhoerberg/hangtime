@@ -59,6 +59,9 @@ export class HangtimeDO extends DurableObject<Env> {
     } catch {
       return;
     }
+    // Temporary setup aid: log any component id not yet in components.config.ts so the
+    // real ids (and their `addr` MAC, when present) can be read from `wrangler tail`.
+    logUnmappedComponents(msg);
     ingest.handleRpc(msg as Parameters<typeof ingest.handleRpc>[0], COMPONENTS, (loc, kind, value, ts) =>
       ingest.handle(this.ctx.storage.sql, loc, kind, value, ts),
     );
@@ -70,5 +73,24 @@ export class HangtimeDO extends DurableObject<Env> {
 
   async webSocketError(_ws: WebSocket, _error: unknown): Promise<void> {
     // No in-memory cleanup needed — all state lives in ctx.storage.sql.
+  }
+}
+
+function logUnmappedComponents(msg: unknown): void {
+  if (typeof msg !== "object" || msg === null) return;
+  const m = msg as { method?: string; params?: Record<string, unknown> };
+  if (m.method === "NotifyStatus" && m.params) {
+    for (const [comp, val] of Object.entries(m.params)) {
+      if (comp === "ts" || comp in COMPONENTS) continue;
+      console.log(`[setup] unmapped component "${comp}":`, JSON.stringify(val));
+    }
+  } else if (m.method === "NotifyEvent" && Array.isArray(m.params?.events)) {
+    for (const ev of m.params!.events as Record<string, unknown>[]) {
+      const comp = ev.component as string | undefined;
+      if (!comp || comp in COMPONENTS) continue;
+      console.log(`[setup] unmapped component "${comp}" event:`, JSON.stringify(ev));
+    }
+  } else if (m.method) {
+    console.log(`[setup] unhandled method "${m.method}":`, JSON.stringify(m.params ?? {}));
   }
 }
