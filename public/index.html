@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mörning – byslakteriet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --frost: #EDF1EF;
+    --paper: #FAFBFA;
+    --granite: #1E2A22;
+    --spruce: #2E5C41;
+    --moss: #8EA695;
+    --hunter: #E3661C;
+    --ice: #C4D6E4;
+    --rule: #C9D2CC;
+    --meter-h: 30px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--frost); color: var(--granite); font-family: Barlow, system-ui, sans-serif; font-size: 17px; line-height: 1.4; }
+  button, input, textarea { font: inherit; color: inherit; }
+  button { cursor: pointer; border: 2px solid var(--granite); background: var(--paper); border-radius: 6px; padding: 10px 16px; font-weight: 600; min-height: 48px; }
+  button.primary { background: var(--granite); color: var(--paper); }
+  button.quiet { border-color: var(--rule); font-weight: 500; }
+  button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px solid var(--hunter); outline-offset: 2px; }
+
+  header { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; padding: 20px 20px 10px; max-width: 900px; margin: 0 auto; }
+  h1 { font-family: 'Barlow Condensed', Barlow, sans-serif; font-weight: 600; font-size: 34px; margin: 0; letter-spacing: -0.01em; }
+  .temps { display: flex; gap: 20px; font-family: 'Barlow Condensed'; font-size: 20px; }
+  .temps b { font-size: 26px; font-weight: 600; }
+  .temps small { display: block; font-size: 13px; font-family: Barlow; color: var(--spruce); }
+  .temps .rh { font-size: 16px; color: var(--spruce); }
+
+  .charts { margin-top: 36px; }
+  .charts h2 { font-family: 'Barlow Condensed'; font-size: 22px; font-weight: 600; margin: 0 0 6px; display: flex; align-items: baseline; gap: 14px; }
+  .charts h2 .legend { font-family: Barlow; font-size: 14px; font-weight: 500; color: var(--spruce); }
+  .legend i { display: inline-block; width: 14px; height: 3px; vertical-align: middle; margin-right: 4px; }
+  .range { display: flex; gap: 6px; margin-bottom: 12px; }
+  .range button { min-height: 36px; padding: 4px 12px; }
+  .range button[aria-pressed="true"] { background: var(--granite); color: var(--paper); }
+  svg.chart { width: 100%; height: auto; display: block; background: var(--paper); border: 1.5px solid var(--rule); border-radius: 6px; margin-bottom: 18px; }
+  svg.chart text { font-family: Barlow; font-size: 11px; fill: var(--spruce); }
+  svg.chart .grid { stroke: var(--rule); stroke-width: 1; }
+  svg.chart .zero { stroke: var(--granite); stroke-width: 1; stroke-dasharray: 3 3; }
+  svg.chart .l-ute { stroke: var(--spruce); stroke-width: 2; fill: none; }
+  svg.chart .l-inne { stroke: #3F7EA6; stroke-width: 2; fill: none; }
+
+  main { max-width: 900px; margin: 0 auto; padding: 0 20px 100px; }
+  .actions { display: flex; gap: 10px; flex-wrap: wrap; padding: 10px 0 18px; border-bottom: 2px solid var(--granite); }
+
+  .moose { padding: 20px 0 16px; border-bottom: 1px solid var(--rule); }
+  .moose.klar { opacity: .55; }
+  .top { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+  .name { font-family: 'Barlow Condensed'; font-size: 26px; font-weight: 600; flex: 1; }
+  .dd { font-family: 'Barlow Condensed'; font-size: 44px; font-weight: 600; line-height: 1; }
+  .dd small { font-size: 16px; font-family: Barlow; font-weight: 500; margin-left: 4px; color: var(--spruce); }
+
+  .meter { position: relative; height: var(--meter-h); background: var(--paper); border: 2px solid var(--granite); border-radius: 4px; margin: 10px 0 8px; overflow: hidden; }
+  .seg { position: absolute; top: 0; bottom: 0; }
+  .seg.ute { background: var(--moss); }
+  .seg.inne { background: var(--ice); }
+  .moose.ready .seg.ute, .moose.ready .seg.inne { background: var(--hunter); }
+  .goal { position: absolute; top: 0; bottom: 0; left: 100%; width: 3px; background: var(--granite); }
+
+  .facts { display: flex; gap: 18px; flex-wrap: wrap; color: var(--spruce); font-size: 15px; }
+  .facts span b { color: var(--granite); font-weight: 600; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; align-items: flex-start; }
+  textarea { width: 100%; min-height: 64px; border: 1.5px solid var(--rule); border-radius: 6px; padding: 8px 10px; background: var(--paper); resize: vertical; }
+  input.small { width: 110px; border: 1.5px solid var(--rule); border-radius: 6px; padding: 8px 10px; background: var(--paper); min-height: 48px; }
+  input.dt { border: 1.5px solid var(--rule); border-radius: 6px; padding: 8px 10px; background: var(--paper); min-height: 44px; }
+  details { margin-top: 8px; }
+  summary { cursor: pointer; color: var(--spruce); font-weight: 500; }
+  .edit { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); padding-top: 10px; }
+  .edit label { display: grid; gap: 4px; font-size: 14px; color: var(--spruce); }
+  .saved { color: var(--spruce); font-size: 14px; align-self: center; }
+
+  .empty { padding: 60px 0; text-align: center; color: var(--spruce); font-size: 20px; }
+  .log { margin-top: 30px; font-size: 14px; color: var(--spruce); }
+  .log div { padding: 4px 0; border-top: 1px dashed var(--rule); }
+
+  #login { max-width: 360px; margin: 20vh auto; padding: 0 20px; display: grid; gap: 12px; }
+  #login input { border: 2px solid var(--granite); border-radius: 6px; padding: 12px; font-size: 20px; background: var(--paper); }
+  .err { color: var(--hunter); font-weight: 600; min-height: 1.4em; }
+  .hidden { display: none !important; }
+  @media (max-width: 600px) { .dd { font-size: 38px; } h1 { font-size: 28px; } }
+</style>
+</head>
+<body>
+
+<form id="login" class="hidden">
+  <h1>Mörning</h1>
+  <input id="pw" type="password" placeholder="Lösenord" autocomplete="current-password" autofocus>
+  <button class="primary" type="submit">Logga in</button>
+  <div class="err" id="loginErr"></div>
+</form>
+
+<div id="app" class="hidden">
+  <header>
+    <h1>Mörning – byslakteriet</h1>
+    <div class="temps">
+      <div><b id="tUte">–</b>° <span id="hUte" class="rh"></span><small>ute</small></div>
+      <div><b id="tInne">–</b>° <span id="hInne" class="rh"></span><small>kylrum</small></div>
+    </div>
+  </header>
+  <main>
+    <div class="actions">
+      <button class="primary" id="btnNew">Ny älg hängd ute</button>
+      <button id="btnIn">Äldsta ute → kylrum</button>
+      <button class="quiet" id="btnRefresh" title="Uppdatera">↻ Uppdatera</button>
+      <label style="display:flex;align-items:center;gap:6px;margin-left:auto"><input type="checkbox" id="showDone"> Visa klara</label>
+    </div>
+    <div id="list"></div>
+
+    <section class="charts">
+      <div class="range" id="range">
+        <button class="quiet" data-h="24">24 h</button>
+        <button class="quiet" data-h="168" aria-pressed="true">7 dygn</button>
+        <button class="quiet" data-h="720">30 dygn</button>
+      </div>
+      <h2>Temperatur °C <span class="legend"><i style="background:var(--spruce)"></i>ute <i style="background:#3F7EA6"></i>kylrum</span></h2>
+      <div id="chartTemp"></div>
+      <h2>Luftfuktighet %</h2>
+      <div id="chartRh"></div>
+    </section>
+
+    <div class="log" id="log"></div>
+  </main>
+</div>
+
+<script>
+const $ = (s) => document.querySelector(s);
+let state = null;
+const api = (url, opt = {}) => fetch('/api' + url, { headers: { 'Content-Type': 'application/json' }, ...opt }).then(async (r) => {
+  if (r.status === 401) { showLogin(); throw new Error('auth'); }
+  return r.json();
+});
+
+// ---- Login ----
+function showLogin() { $('#login').classList.remove('hidden'); $('#app').classList.add('hidden'); }
+$('#login').onsubmit = async (e) => {
+  e.preventDefault();
+  const r = await fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: $('#pw').value }) });
+  if (r.ok) { $('#login').classList.add('hidden'); start(); } else $('#loginErr').textContent = 'Fel lösenord';
+};
+
+// ---- Formatering ----
+const fmtDD = (v) => v.toFixed(1).replace('.', ',');
+const fmtDur = (h) => {
+  if (h < 1) return Math.round(h * 60) + ' min';
+  const d = Math.floor(h / 24), hh = Math.round(h % 24);
+  return d ? `${d} d ${hh} h` : `${hh} h`;
+};
+const fmtDate = (ts) => ts ? new Date(ts * 1000).toLocaleString('sv-SE', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '–';
+const toLocalInput = (ts) => { if (!ts) return ''; const d = new Date(ts * 1000); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 16); };
+const fromLocalInput = (v) => v ? Math.floor(new Date(v).getTime() / 1000) : null;
+
+// ---- Render ----
+function render() {
+  if (!state) return;
+  $('#tUte').textContent = state.temps.ute ? state.temps.ute.temp.toFixed(1).replace('.', ',') : '–';
+  $('#tInne').textContent = state.temps.inne ? state.temps.inne.temp.toFixed(1).replace('.', ',') : '–';
+  $('#hUte').textContent = state.humidity.ute ? Math.round(state.humidity.ute.rh) + ' %' : '';
+  $('#hInne').textContent = state.humidity.inne ? Math.round(state.humidity.inne.rh) + ' %' : '';
+  $('#btnIn').disabled = !state.moose.some((m) => m.stage === 'ute');
+
+  const showDone = $('#showDone').checked;
+  const list = state.moose.filter((m) => showDone || m.stage !== 'klar').reverse();
+  const el = $('#list');
+  if (!list.length) { el.innerHTML = '<div class="empty">Inga älgar hänger just nu. Tryck på knappen ute när den första är skinnad.</div>'; }
+  else el.innerHTML = list.map(card).join('');
+
+  $('#log').innerHTML = '<b>Senaste händelser</b>' + state.events.map((e) =>
+    `<div>${fmtDate(e.ts)} – ${({ ny_alg: 'Ny älg ute', in_i_kyl: 'In i kylrum', kyl_tryck_utan_alg: 'Tryck i kylrum utan älg ute' })[e.type] || e.type}${e.name ? ' · ' + e.name : ''}</div>`).join('');
+}
+
+function card(m) {
+  const t = state.target;
+  const pOut = Math.min(100, m.dd_out / t * 100), pIn = Math.min(100 - pOut, m.dd_in / t * 100);
+  const ready = m.dd_total >= t;
+  const stageTxt = { ute: 'Hänger ute', inne: 'Hänger i kylrummet', klar: 'Finstyckad' }[m.stage];
+  const eta = m.stage === 'klar' ? '' : ready ? '<span><b>Klar att finstycka</b></span>'
+    : m.eta_ts ? `<span>Klar ca <b>${fmtDate(m.eta_ts)}</b></span>` : '<span>Ingen prognos (ingen plusgrad)</span>';
+  return `
+  <article class="moose ${m.stage} ${ready ? 'ready' : ''}" data-id="${m.id}">
+    <div class="top">
+      <div class="name">${esc(m.name)}</div>
+      <div class="dd">${fmtDD(m.dd_total)}<small>av ${t} dygnsgrader</small></div>
+    </div>
+    <div class="meter" role="progressbar" aria-valuenow="${m.dd_total.toFixed(1)}" aria-valuemax="${t}">
+      <div class="seg ute" style="left:0;width:${pOut}%"></div>
+      <div class="seg inne" style="left:${pOut}%;width:${pIn}%"></div>
+    </div>
+    <div class="facts">
+      <span><b>${stageTxt}</b></span>
+      <span>Ute <b>${fmtDur(m.hours_out)}</b> · ${fmtDD(m.dd_out)} dg</span>
+      ${m.in_start ? `<span>Inne <b>${fmtDur(m.hours_in)}</b> · ${fmtDD(m.dd_in)} dg</span>` : ''}
+      ${eta}
+    </div>
+    <div class="row">
+      <textarea data-f="comment" placeholder="Kommentar: vombskjuten, skytt, kön, ålder…">${esc(m.comment || '')}</textarea>
+    </div>
+    <div class="row">
+      <input class="small" data-f="weight_kg" type="number" inputmode="decimal" placeholder="Vikt kg" value="${m.weight_kg ?? ''}">
+      <button class="quiet" data-a="save">Spara</button>
+      ${m.stage === 'ute' ? '<button data-a="inside">Flytta till kylrum</button>' : ''}
+      ${m.stage === 'inne' ? '<button data-a="done">Markera finstyckad</button>' : ''}
+      <span class="saved" data-saved></span>
+    </div>
+    <details>
+      <summary>Rätta tider / namn / ta bort</summary>
+      <div class="edit">
+        <label>Namn <input class="dt" data-f="name" value="${esc(m.name)}"></label>
+        <label>Hängd ute <input class="dt" data-f="out_start" type="datetime-local" value="${toLocalInput(m.out_start)}"></label>
+        <label>In i kylrum <input class="dt" data-f="in_start" type="datetime-local" value="${toLocalInput(m.in_start)}"></label>
+        <label>Finstyckad <input class="dt" data-f="done_at" type="datetime-local" value="${toLocalInput(m.done_at)}"></label>
+        <button class="quiet" data-a="saveTimes">Spara ändrade tider</button>
+        <button class="quiet" data-a="delete" style="color:var(--hunter)">Ta bort älgen</button>
+      </div>
+    </details>
+  </article>`;
+}
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+// ---- Actions ----
+$('#list').addEventListener('click', async (e) => {
+  const btn = e.target.closest('button[data-a]'); if (!btn) return;
+  const art = btn.closest('article'); const id = art.dataset.id;
+  const val = (f) => art.querySelector(`[data-f="${f}"]`).value;
+  const a = btn.dataset.a;
+  if (a === 'save') {
+    await api(`/moose/${id}`, { method: 'PATCH', body: JSON.stringify({ comment: val('comment'), weight_kg: val('weight_kg') === '' ? null : +val('weight_kg') }) });
+    art.querySelector('[data-saved]').textContent = 'Sparat'; setTimeout(load, 800);
+  } else if (a === 'saveTimes') {
+    await api(`/moose/${id}`, { method: 'PATCH', body: JSON.stringify({ name: val('name'), out_start: fromLocalInput(val('out_start')), in_start: fromLocalInput(val('in_start')), done_at: fromLocalInput(val('done_at')) }) });
+    load();
+  } else if (a === 'inside') { await api(`/moose/${id}/inside`, { method: 'POST' }); load(); }
+  else if (a === 'done') { await api(`/moose/${id}/done`, { method: 'POST' }); load(); }
+  else if (a === 'delete') { if (confirm('Ta bort den här älgen helt?')) { await api(`/moose/${id}`, { method: 'DELETE' }); load(); } }
+});
+$('#btnNew').onclick = async () => { if (confirm('Registrera en ny älg som hängd ute nu?')) { await api('/moose', { method: 'POST' }); load(); } };
+$('#btnIn').onclick = async () => {
+  const m = state.moose.filter((x) => x.stage === 'ute').sort((a, b) => a.out_start - b.out_start)[0];
+  if (m && confirm(`Flytta ${m.name} till kylrummet nu?`)) { await api(`/moose/${m.id}/inside`, { method: 'POST' }); load(); }
+};
+$('#showDone').onchange = render;
+
+// ---- Grafer (inline-SVG) ----
+let rangeHours = 168;
+async function loadHistory() {
+  const h = await api(`/history?hours=${rangeHours}`);
+  $('#chartTemp').innerHTML = chart(h.series.temp, h.from, { unit: '°', zero: true });
+  $('#chartRh').innerHTML = chart(h.series.rh, h.from, { unit: '%', min: 0, max: 100 });
+}
+function chart(series, from, opt) {
+  const W = 800, H = 260, L = 42, R = 12, T = 12, B = 30;
+  const to = Math.floor(Date.now() / 1000);
+  const pts = Object.values(series).flat();
+  if (!pts.length) return `<svg class="chart" viewBox="0 0 ${W} ${H}"><text x="${W / 2}" y="${H / 2}" text-anchor="middle">Inga mätvärden än</text></svg>`;
+  let vals = pts.map((p) => p[1]);
+  let min = opt.min ?? Math.min(...vals), max = opt.max ?? Math.max(...vals);
+  if (opt.zero) { min = Math.min(min, 0); }
+  if (max - min < 4) { max = min + 4; }
+  const pad = opt.max == null ? (max - min) * 0.08 : 0; min -= opt.min == null ? pad : 0; max += pad;
+  const x = (t) => L + (t - from) / (to - from) * (W - L - R);
+  const y = (v) => T + (max - v) / (max - min) * (H - T - B);
+
+  let out = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img">`;
+  const step = niceStep((max - min) / 5);
+  for (let v = Math.ceil(min / step) * step; v <= max; v += step) {
+    out += `<line class="grid" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${+v.toFixed(1)}${opt.unit}</text>`;
+  }
+  if (opt.zero && min < 0) out += `<line class="zero" x1="${L}" x2="${W - R}" y1="${y(0)}" y2="${y(0)}"/>`;
+  const span = to - from, ticks = span <= 48 * 3600 ? 6 * 3600 : span <= 15 * 86400 ? 86400 : 5 * 86400;
+  for (let t = Math.ceil(from / ticks) * ticks; t <= to; t += ticks) {
+    const d = new Date(t * 1000);
+    const label = span <= 48 * 3600 ? d.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' }) : d.toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' });
+    out += `<line class="grid" y1="${T}" y2="${H - B}" x1="${x(t)}" x2="${x(t)}"/><text x="${x(t)}" y="${H - 10}" text-anchor="middle">${label}</text>`;
+  }
+  for (const [loc, arr] of Object.entries(series)) {
+    if (!arr.length) continue;
+    out += `<path class="l-${loc}" d="${arr.map((p, i) => (i ? 'L' : 'M') + x(p[0]).toFixed(1) + ' ' + y(p[1]).toFixed(1)).join(' ')}"/>`;
+  }
+  return out + '</svg>';
+}
+const niceStep = (r) => { const p = 10 ** Math.floor(Math.log10(r)); const n = r / p; return (n < 1.5 ? 1 : n < 3.5 ? 2 : n < 7.5 ? 5 : 10) * p; };
+$('#range').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-h]'); if (!b) return;
+  rangeHours = +b.dataset.h;
+  $('#range').querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', x === b));
+  loadHistory();
+});
+
+// ---- Load ----
+async function load() { state = await api('/state'); render(); loadHistory(); }
+function start() { $('#app').classList.remove('hidden'); load(); }
+$('#btnRefresh').onclick = load;
+fetch('/api/state').then((r) => r.ok ? start() : showLogin());
+</script>
+</body>
+</html>
