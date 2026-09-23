@@ -25,9 +25,20 @@ export function handleRpc(
   } else if (msg.method === "NotifyEvent") {
     const events = (msg.params?.events as Array<Record<string, unknown>> | undefined) ?? [];
     for (const ev of events) {
+      const ts = typeof ev.ts === "number" ? ev.ts : null;
+
+      // shelly/ble-hangtime-relay.js: a Shelly-script-emitted event carrying its own
+      // location and already-decoded BTHome fields (no per-gateway component-id map needed).
+      if (ev.event === "bthome_report" && isLocation(ev.location)) {
+        if (typeof ev.temperature === "number") onHandle(ev.location, "temperature", ev.temperature, ts);
+        if (typeof ev.humidity === "number") onHandle(ev.location, "humidity", ev.humidity, ts);
+        if (typeof ev.button === "number") onHandle(ev.location, "button", "push", ts);
+        continue;
+      }
+
+      // Legacy path: a native Shelly BLU Gateway relaying its own bthomesensor:N components.
       const map = components[ev.component as string];
       if (!map || map.kind !== "button" || !String(ev.event).includes("push")) continue;
-      const ts = typeof ev.ts === "number" ? ev.ts : null;
       onHandle(map.location, "button", String(ev.event), ts);
     }
   }
