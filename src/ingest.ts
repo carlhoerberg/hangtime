@@ -29,10 +29,14 @@ export function handleRpc(
 
       // shelly/ble-hangtime-relay.js: a Shelly-script-emitted event carrying its own
       // location and already-decoded BTHome fields (no per-gateway component-id map needed).
-      if (ev.event === "bthome_report" && isLocation(ev.location)) {
-        if (typeof ev.temperature === "number") onHandle(ev.location, "temperature", ev.temperature, ts);
-        if (typeof ev.humidity === "number") onHandle(ev.location, "humidity", ev.humidity, ts);
-        if (typeof ev.button === "number") onHandle(ev.location, "button", "push", ts);
+      // Shelly.emitEvent() nests the passed data object under `data`, not spread onto ev.
+      if (ev.event === "bthome_report") {
+        const data = (ev.data ?? {}) as Record<string, unknown>;
+        if (isLocation(data.location)) {
+          if (typeof data.temperature === "number") onHandle(data.location, "temperature", data.temperature, ts);
+          if (typeof data.humidity === "number") onHandle(data.location, "humidity", data.humidity, ts);
+          if (typeof data.button === "number") onHandle(data.location, "button", "push", ts);
+        }
         continue;
       }
 

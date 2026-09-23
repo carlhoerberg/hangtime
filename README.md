@@ -2,13 +2,17 @@
 
 Cloudflare Workers + Durable Objects port of `morningstimer` — tracks moose-carcass
 aging ("mörning") using degree-day accumulation from two Shelly BLU H&T sensors
-(outside / cold room), relayed by a Shelly BLU Gateway Gen3.
+(outside / cold room).
 
-Unlike the original Ruby app (which listened for UDP pushes from the gateway on a
-Raspberry Pi), this version expects the gateway to open an **outbound WebSocket
-connection** to `/ws?token=<GATEWAY_TOKEN>` and push the same `NotifyStatus` /
-`NotifyEvent` JSON-RPC messages over that socket as text frames. The on-device
-Shelly script that makes that connection is not part of this repo.
+Unlike the original Ruby app (which listened for UDP pushes on a Raspberry Pi),
+this version expects a Shelly Gen2+ device to open an **outbound WebSocket
+connection** to `/ws?token=<GATEWAY_TOKEN>` (a built-in Gen2+ firmware feature,
+`Ws.SetConfig`). That device runs `shelly/ble-hangtime-relay.js` (in the
+`hallfjallet` repo, alongside the other Shelly device scripts) — a script that
+scans for BTHome BLE adverts from the two BLU H&T sensors and re-emits them as
+a `bthome_report` script event, which the outbound WebSocket then forwards to
+this Worker as a `NotifyEvent`. See `ingest.ts` for the exact message shape
+(`Shelly.emitEvent()` nests the passed data under an event's `data` key).
 
 ## Architecture
 
@@ -75,10 +79,11 @@ hibernation *timing*, but correctness is unaffected since all state lives in
 ## Component mapping
 
 `src/components.config.ts` maps Shelly BLU Gateway component ids (BTHome
-sensor slots, e.g. `bthomesensor:200`) to `{location, kind}`. These numeric
-ids are gateway-specific and must be discovered empirically — connect with
-the real gateway and watch the messages arriving in `webSocketMessage()`
-during setup.
+sensor slots, e.g. `bthomesensor:200`) to `{location, kind}`. This is only
+used by the legacy native-BLU-Gateway path in `ingest.ts` (a real BLU Gateway
+Gen3 adopting BTHome sensors as its own components) — the current setup uses
+`shelly/ble-hangtime-relay.js` instead, which maps sensor MAC addresses to
+locations itself and doesn't need this file.
 
 ## Deploy
 
