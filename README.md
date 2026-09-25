@@ -7,12 +7,12 @@ aging ("mörning") using degree-day accumulation from two Shelly BLU H&T sensors
 Unlike the original Ruby app (which listened for UDP pushes on a Raspberry Pi),
 this version expects a Shelly Gen2+ device to open an **outbound WebSocket
 connection** to `/ws?token=<GATEWAY_TOKEN>` (a built-in Gen2+ firmware feature,
-`Ws.SetConfig`). That device runs `shelly/ble-hangtime-relay.js` (in the
-`hallfjallet` repo, alongside the other Shelly device scripts) — a script that
-scans for BTHome BLE adverts from the two BLU H&T sensors and re-emits them as
-a `bthome_report` script event, which the outbound WebSocket then forwards to
-this Worker as a `NotifyEvent`. See `ingest.ts` for the exact message shape
-(`Shelly.emitEvent()` nests the passed data under an event's `data` key).
+`Ws.SetConfig`). That device runs `shelly/ble-hangtime-relay.js` (in this repo)
+— a script that scans for BTHome BLE adverts from the two BLU H&T sensors and
+re-emits them as a `bthome_report` script event, which the outbound WebSocket
+then forwards to this Worker as a `NotifyEvent`. See `ingest.ts` for the exact
+message shape (`Shelly.emitEvent()` nests the passed data under an event's
+`data` key).
 
 ## Architecture
 
@@ -75,6 +75,18 @@ manual refresh.
 Note: local `wrangler dev` (Miniflare) won't fully replicate production
 hibernation *timing*, but correctness is unaffected since all state lives in
 `ctx.storage.sql` rather than in memory.
+
+## Shelly relay script
+
+`shelly/ble-hangtime-relay.js` runs on the Shelly Gen2+ device itself (not
+here) — paste it into that device's web UI under **Settings → Scripts → Add
+script**, edit the `sensors` map at the top with your BLU H&T MAC addresses,
+then Save, Start, and enable "Run on startup". The device also needs BLE
+enabled and its outbound WebSocket configured to point at
+`wss://<this-worker>/ws?token=<GATEWAY_TOKEN>` (`Ws.SetConfig`).
+
+Note: Shelly's mJS engine doesn't reliably auto-insert semicolons after a
+bare `return` — see the `eslint-disable semi` comment at the top of the file.
 
 ## Component mapping
 
