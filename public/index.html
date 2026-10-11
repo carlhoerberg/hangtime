@@ -168,7 +168,7 @@ function render() {
   const showDone = $('#showDone').checked;
   const list = state.moose.filter((m) => showDone || m.stage !== 'klar').reverse();
   const el = $('#list');
-  if (!list.length) { el.innerHTML = '<div class="empty">Inga älgar hänger just nu. Tryck på knappen ute när den första är skinnad.</div>'; }
+  if (!list.length) { el.innerHTML = '<div class="empty">Inga älgar hänger just nu. Tryck på knappen ute när den första är flådd.</div>'; }
   else el.innerHTML = list.map(card).join('');
 
   $('#log').innerHTML = '<b>Senaste händelser</b>' + state.events.map((e) =>
