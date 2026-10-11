@@ -13,6 +13,11 @@ export class HangtimeDO extends DurableObject<Env> {
     super(ctx, env);
     ctx.blockConcurrencyWhile(async () => {
       db.initSchema(ctx.storage.sql);
+      // One-shot wipe of pre-launch test data; remove this block once it has run.
+      if (!ctx.storage.kv.get("wiped-2026-10-11")) {
+        for (const t of ["moose", "readings", "humidity", "events", "last_button"]) ctx.storage.sql.exec(`DELETE FROM ${t}`);
+        ctx.storage.kv.put("wiped-2026-10-11", true);
+      }
     });
   }
 
@@ -52,25 +57,16 @@ export class HangtimeDO extends DurableObject<Env> {
   }
 
   async webSocketMessage(_ws: WebSocket, message: string | ArrayBuffer): Promise<void> {
-    if (typeof message !== "string") {
-      console.log("ws: ignoring non-text frame", message.byteLength);
-      return; // gateway only sends JSON text frames
-    }
-    console.log("ws: message", message.slice(0, 500));
+    if (typeof message !== "string") return; // gateway only sends JSON text frames
     let msg: unknown;
     try {
       msg = JSON.parse(message);
     } catch {
-      console.log("ws: dropped, invalid JSON");
       return;
     }
-    let stored = 0;
-    ingest.handleRpc(msg as Parameters<typeof ingest.handleRpc>[0], COMPONENTS, (loc, kind, value, ts) => {
-      stored++;
-      console.log("ws: ingest", loc, kind, value, ts);
-      ingest.handle(this.ctx.storage.sql, loc, kind, value, ts);
-    });
-    if (!stored) console.log("ws: message produced no readings");
+    ingest.handleRpc(msg as Parameters<typeof ingest.handleRpc>[0], COMPONENTS, (loc, kind, value, ts) =>
+      ingest.handle(this.ctx.storage.sql, loc, kind, value, ts),
+    );
   }
 
   async webSocketClose(ws: WebSocket, code: number, reason: string): Promise<void> {
