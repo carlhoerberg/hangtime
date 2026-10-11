@@ -52,20 +52,31 @@ export class HangtimeDO extends DurableObject<Env> {
   }
 
   async webSocketMessage(_ws: WebSocket, message: string | ArrayBuffer): Promise<void> {
-    if (typeof message !== "string") return; // gateway only sends JSON text frames
+    if (typeof message !== "string") {
+      console.log("ws: ignoring non-text frame", message.byteLength);
+      return; // gateway only sends JSON text frames
+    }
+    console.log("ws: message", message.slice(0, 500));
     let msg: unknown;
     try {
       msg = JSON.parse(message);
     } catch {
+      console.log("ws: dropped, invalid JSON");
       return;
     }
-    ingest.handleRpc(msg as Parameters<typeof ingest.handleRpc>[0], COMPONENTS, (loc, kind, value, ts) =>
-      ingest.handle(this.ctx.storage.sql, loc, kind, value, ts),
-    );
+    let stored = 0;
+    ingest.handleRpc(msg as Parameters<typeof ingest.handleRpc>[0], COMPONENTS, (loc, kind, value, ts) => {
+      stored++;
+      console.log("ws: ingest", loc, kind, value, ts);
+      ingest.handle(this.ctx.storage.sql, loc, kind, value, ts);
+    });
+    if (!stored) console.log("ws: message produced no readings");
   }
 
   async webSocketClose(ws: WebSocket, code: number, reason: string): Promise<void> {
-    ws.close(code, reason);
+    // 1005/1006/1015 are reserved for local reporting and can't be sent in a close frame.
+    const reserved = code === 1005 || code === 1006 || code === 1015;
+    ws.close(reserved ? 1000 : code, reserved ? "" : reason);
   }
 
   async webSocketError(_ws: WebSocket, _error: unknown): Promise<void> {
